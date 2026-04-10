@@ -34,8 +34,8 @@ specs:
 
 Infer domain from the spec `id` prefix in this order:
 
-1. **Exact prefix match** on known patterns: `census-` → `census`, `ehr-` → `ehr`, `clinical-` → `clinical`, `auth-` / `identity-` / `tenant-` → `auth`, `encounter-` → `encounter`, `charge-` → `billing`, `cdk-` / `ecs-` / `container-` / `image-` → `infra`, `dev-` / `test-` / `integration-` → `dx`, `ui-` → `ui`
-2. **First path segment** of most-referenced `paths` entry (e.g., `services/census/` → `census`)
+1. **First hyphen-delimited word** of the spec id (e.g., `auth-session` → `auth`, `payment-processing` → `payment`)
+2. **First path segment** of most-referenced `paths` entry (e.g., `services/payments/` → `payments`)
 3. **First hyphen-delimited word** of the spec id as fallback
 
 ---

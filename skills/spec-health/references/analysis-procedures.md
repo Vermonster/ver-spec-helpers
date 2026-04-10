@@ -19,11 +19,11 @@ For each spec, collect path references from two sources:
 For each path reference, test existence relative to the repo root:
 
 ```bash
-# For a directory reference like `services/census/`
-test -d services/census && echo "exists" || echo "missing"
+# For a directory reference like `services/payments/`
+test -d services/payments && echo "exists" || echo "missing"
 
-# For a file reference like `lib/db/schema/helpers.ts`
-test -f lib/db/schema/helpers.ts && echo "exists" || echo "missing"
+# For a file reference like `lib/auth/session.ts`
+test -f lib/auth/session.ts && echo "exists" || echo "missing"
 
 # For an ambiguous reference, try both
 test -e lib/auth && echo "exists" || echo "missing"
@@ -41,7 +41,7 @@ test -e lib/auth && echo "exists" || echo "missing"
 ### Drift Signals Beyond Paths
 
 In addition to explicit path checking, note these secondary signals (do not auto-classify, but include in report commentary):
-- Spec references a library or tool by name (e.g., "Drizzle", "Zod") — check if that package is still in `package.json` or equivalent
+- Spec references a package or library by name — check if it is still present in the project's dependency manifest (`package.json`, `Gemfile`, `pyproject.toml`, etc.)
 - Spec references a specific schema table by name — check if a migration or model file for that table still exists
 - Spec was last modified significantly earlier than related source files (use `git log --oneline -1 -- <spec>` vs `git log --oneline -1 -- <referenced_path>`)
 
