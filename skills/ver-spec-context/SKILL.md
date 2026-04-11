@@ -52,7 +52,18 @@ If stale or missing, proceed to **Step 3**. Otherwise skip to **Step 4**.
 spec-index build <specs_dir>
 ```
 
-**Fallback**: Follow the build procedure in [shared/index-format.md](../shared/index-format.md) to generate `<specs_dir>/index.yaml`.
+**Fallback**: Generate `<specs_dir>/index.yaml` directly:
+
+1. Discover specs: `find <specs_dir> -name "spec.md" | sort`
+2. For each spec, extract:
+   - **id**: directory name (`basename $(dirname <path>)`)
+   - **summary**: detect format first:
+     - If title line matches `^# Feature Specification:` (Spec Kit): use feature name + first plain-text sentence under `### User Story 1`, joined with ` — `
+     - Otherwise (OpenSpec/custom): first non-blank text between the `# Title` line and the first `---`; max 200 chars
+   - **token_estimate**: `wc -c < <path>` ÷ 4, rounded to nearest 10
+   - **paths**: all backtick-quoted tokens containing `/` that don't start with `http`, deduplicated
+   - **domain**: first hyphen-delimited word of the spec id (e.g. `auth-session` → `auth`)
+3. Write `<specs_dir>/index.yaml` with `generated_at` set to current UTC time
 
 Announce: "Building spec index…" and report how many specs were indexed on completion.
 

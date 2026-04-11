@@ -50,7 +50,7 @@ Build the list of all spec IDs (directory names). Note total count.
 spec-index check <specs_dir> || spec-index build <specs_dir>
 ```
 
-**Fallback**: Check `<specs_dir>/index.yaml` freshness per [shared/index-format.md](../shared/index-format.md) and rebuild if stale.
+**Fallback**: Check `<specs_dir>/index.yaml` — stale if missing, if any `spec.md` is newer than `generated_at`, or if spec count differs from index entry count. Rebuild if stale using the same procedure as `ver-spec-context` Step 3.
 
 The index provides token estimates and path references for all three analyses.
 
