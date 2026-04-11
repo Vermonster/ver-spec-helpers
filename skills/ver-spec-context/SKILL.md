@@ -1,5 +1,5 @@
 ---
-name: spec-context
+name: ver-spec-context
 description: Load only the specs relevant to your current task. Use at the start of any task where project specs exist — reads a compact index to select and load only what's needed, rather than loading all specs.
 license: MIT
 compatibility: Works with any project that has spec files in a consistent directory structure. Framework-agnostic.

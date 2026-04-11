@@ -1,5 +1,5 @@
 ---
-name: spec-health
+name: ver-spec-health
 description: Audit spec library health — find stale specs, overlapping content, and context bloat. Runs in analysis mode by default; write mode applies approved changes. Use periodically as a maintenance task or when specs feel unwieldy.
 license: MIT
 compatibility: Works with any project that has spec files in a consistent directory structure. Framework-agnostic.

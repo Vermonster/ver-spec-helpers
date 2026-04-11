@@ -1,50 +1,82 @@
-# openspec-contextualize
+# spec-contextualize
 
-Two agent skills for managing spec library context efficiency. As a spec library grows, loading every spec into an agent's context window floods it with irrelevant content. These skills solve that by building a compact index and maintaining spec health over time.
+Agent skills for managing spec library context as your [OpenSpec](https://github.com/openspec) library grows. As the number of specs increases, loading all of them into an agent's context window becomes a liability — noise accumulates, performance degrades, and relevance drops. These two skills fix that.
+
+```bash
+npx skills add Vermonster/spec-contextualize
+```
+
+---
 
 ## Skills
 
-### `spec-context` — Load Only What's Needed
+### `ver-spec-context` — Focused Context Loading
 
-Discovery skill. Reads a compact `index.yaml` to select and load only the specs relevant to the current task, rather than loading all specs blindly.
+Load only the specs your current task actually needs.
 
-**Use at the start of any task** where the project has a spec library. The index is auto-generated and auto-refreshed when stale.
+At the start of any spec-driven task, this skill reads a compact auto-generated `index.yaml` — a terse catalog of every spec with a one-sentence summary, token estimate, domain tag, and referenced code paths — then selects only the specs relevant to the work at hand. Everything else stays off the context window.
 
 **What it does:**
-1. Locates the specs directory (`openspec/specs/`, `specs/`, etc.)
-2. Builds or refreshes `index.yaml` if missing or stale
-3. Reads the index (small — typically <100 lines)
-4. Selects specs relevant to the current task by path overlap, domain, and keywords
-5. Loads only the selected specs, reporting what was loaded and what was skipped
+1. Locates the specs directory (`openspec/specs/`, `specs/`, or nearest equivalent)
+2. Checks freshness of `index.yaml`; rebuilds it if stale
+3. Reads the index (~100 lines regardless of spec library size)
+4. Scores specs by path overlap, domain match, and keyword relevance
+5. Loads the winning set (targeting ≤ 4,000 estimated tokens)
+6. Reports what was loaded and what was intentionally skipped
 
-### `spec-health` — Audit and Maintain
+**Invoke it with**: *"Load spec context for this task"* or just start a task — the skill is designed to run first.
 
-Maintenance skill with two modes:
+---
 
-- **Analysis mode** (default, read-only): Produces a health report covering relevance drift, content overlap, and context bloat
-- **Write mode**: Presents the analysis first, then asks for confirmation before applying any changes
+### `ver-spec-health` — Spec Library Maintenance
 
-**Run periodically** or when the spec library starts feeling unwieldy.
+Find and fix what's dragging your spec library down.
+
+Runs a structured audit across three dimensions — relevance drift (specs whose referenced code no longer exists), content overlap (spec pairs covering the same territory), and context bloat (oversized specs consuming a disproportionate share of the token budget). Analysis mode is always read-only. Write mode presents findings and applies changes only after explicit confirmation per category.
 
 **What it detects:**
-- **Relevance drift**: Specs whose referenced code paths no longer exist
-- **Content overlap**: Spec pairs with substantially duplicated structure or territory
-- **Context bloat**: Oversized specs and disproportionate token concentration
-- **Index currency**: Whether `index.yaml` needs a rebuild
+- **Relevance drift** — specs referencing code paths that no longer exist
+- **Content overlap** — spec pairs with ≥ 50% shared heading structure
+- **Context bloat** — specs exceeding 800 estimated tokens; top-heavy distributions
+
+**Invoke it with**: *"Run spec health"* or *"Audit my specs"* for analysis. Add *"and apply the recommendations"* or `--write` to enter write mode.
+
+---
+
+## Installation
+
+```bash
+npx skills add Vermonster/spec-contextualize
+```
+
+This installs both `ver-spec-context` and `ver-spec-health` into your project's agent skill directories (`.claude/skills/`, `.github/skills/`, `.cursor/skills/`, etc.).
+
+To install a single skill:
+
+```bash
+npx skills add Vermonster/spec-contextualize --skill ver-spec-context
+npx skills add Vermonster/spec-contextualize --skill ver-spec-health
+```
+
+To install globally (available across all projects):
+
+```bash
+npx skills add Vermonster/spec-contextualize --global
+```
 
 ---
 
 ## The Index
 
-Both skills share `index.yaml` — a small, auto-generated file placed at the root of the specs directory.
+Both skills share `index.yaml` — a small, auto-generated file at the root of your specs directory. It is the only file agents must always read; all spec files are loaded on demand from it.
 
 ```yaml
-generated_at: 2026-04-10T19:00:00Z
+generated_at: 2026-04-11T15:00:00Z
 specs_dir: openspec/specs
 specs:
   - id: payment-processing
-    domain: payments
-    summary: "Rules and constraints for the payments table; idempotency key semantics and retry behavior."
+    domain: payment
+    summary: "Payments table invariants; idempotency key semantics and retry behavior for failed charges."
     token_estimate: 420
     paths:
       - services/payments/
@@ -57,37 +89,51 @@ specs:
       - lib/auth/
 ```
 
-The index is **never edited by hand**. It is regenerated by `spec-context` (when stale) and by `spec-health` (after write-mode changes). See [skills/shared/index-format.md](skills/shared/index-format.md) for the full schema and build procedure.
-
-Add `index.yaml` to your repo (commit it) so agents always have a starting point without rebuilding.
+`index.yaml` is **never edited by hand** — it is generated and refreshed automatically by the skills or via the included CLI. Commit it alongside your specs so agents always have a starting point without rebuilding.
 
 ---
 
-## Installation
+## CLI: `bin/spec-index`
 
-Copy the skill directories into your project's agent skills folder:
-
-```bash
-cp -r skills/spec-context  <your-project>/.agents/skills/
-cp -r skills/spec-health   <your-project>/.agents/skills/
-cp -r skills/shared        <your-project>/.agents/skills/
-```
-
-Or symlink them for development:
+A portable shell script for deterministic index management. Zero dependencies — works on Mac, Linux, and BSD.
 
 ```bash
-ln -s <path-to-openspec-contextualize>/skills/spec-context  <your-project>/.agents/skills/spec-context
-ln -s <path-to-openspec-contextualize>/skills/spec-health   <your-project>/.agents/skills/spec-health
-ln -s <path-to-openspec-contextualize>/skills/shared        <your-project>/.agents/skills/shared
+# Build or rebuild the index
+bin/spec-index build [<specs-dir>]
+
+# Check freshness (exits 1 if stale — suitable for CI / pre-commit hooks)
+bin/spec-index check [<specs-dir>]
+
+# List all specs with domain and summary
+bin/spec-index list [<specs-dir>]
+
+# Show token budget and domain breakdown
+bin/spec-index stats [<specs-dir>]
 ```
 
-The skills are framework-agnostic and require no CLI beyond standard shell tools (`find`, `wc`, `grep`, `test`).
+`<specs-dir>` is auto-detected if omitted (looks for `openspec/specs/` then `specs/`).
+
+**Pre-commit hook example:**
+
+```bash
+# .git/hooks/pre-commit
+bin/spec-index check || { echo "spec index is stale — run bin/spec-index build"; exit 1; }
+```
 
 ---
 
-## Compatibility
+## Requirements
 
-- Works with any project using a structured specs directory (`<dir>/<spec-id>/spec.md`)
-- No external CLI dependencies
-- Designed alongside [OpenSpec](https://github.com/openspec) conventions but not limited to them
-- `spec-health` complements rather than replaces quality-focused evaluation skills (e.g., `openspec-evaluate-specs`) — health focuses on efficiency, evaluate focuses on content quality
+- Specs must follow the `<specs-dir>/<spec-id>/spec.md` directory structure
+- Each spec should open with a 1–3 sentence summary paragraph between the `# Title` line and the first `---` separator (the CLI and skills use this invariant to extract summaries)
+- No external CLI dependencies beyond standard POSIX tools (`find`, `awk`, `grep`, `wc`)
+- Compatible with [OpenSpec](https://github.com/openspec) conventions but not limited to them
+
+---
+
+## Related
+
+- [`ver-spec-health`](skills/ver-spec-health/SKILL.md) complements rather than replaces quality-focused audit skills (e.g., `openspec-evaluate-specs`). Health targets efficiency — token load, structural staleness, and overlap. Evaluate targets content quality — retention policy, completeness, accuracy.
+- Index schema and build algorithm reference: [`skills/shared/index-format.md`](skills/shared/index-format.md)
+- Detailed analysis algorithms: [`skills/ver-spec-health/references/analysis-procedures.md`](skills/ver-spec-health/references/analysis-procedures.md)
+
