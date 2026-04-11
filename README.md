@@ -124,13 +124,57 @@ bin/spec-index check || { echo "spec index is stale — run bin/spec-index build
 
 ---
 
+## How These Skills Work With Your Specs
+
+These skills work with any project that stores specs as individual markdown files in a consistent directory structure. The only hard requirement is `<specs-dir>/<spec-id>/spec.md`. Beyond that, summary extraction adapts to the format it detects.
+
+When `spec-index build` runs, it walks the specs directory, extracts a one-line summary from each spec file, estimates token counts, infers domain tags from the spec ID, and produces `index.yaml`. Agents read this compact index first — then load only the individual spec files that are relevant to the task.
+
+### With OpenSpec
+
+[OpenSpec](https://github.com/openspec) stores specs under `openspec/specs/<spec-id>/spec.md`. Each spec opens with a 1–3 sentence summary paragraph immediately after the `# Title` line, before the first `---` separator. The CLI extracts that paragraph verbatim as the index summary.
+
+```
+openspec/
+  specs/
+    auth-session/
+      spec.md        ← summary extracted from paragraph before first ---
+    payment-processing/
+      spec.md
+```
+
+Auto-detected: `bin/spec-index` checks for `openspec/specs/` first.
+
+### With Spec Kit
+
+[Spec Kit](https://github.com/github/spec-kit) stores specs under `specs/<spec-id>/spec.md`. Each spec opens with a `# Feature Specification: <Name>` title followed by structured metadata and user stories — there is no free-form summary paragraph. The CLI detects this format automatically (by the `# Feature Specification:` heading) and builds the summary from the feature name plus the first plain-text sentence in the first User Story.
+
+```
+specs/
+  002-deterministic-demo-runtime/
+    spec.md        ← summary built from feature name + User Story 1
+  003-scenario-tui/
+    spec.md
+```
+
+Auto-detected: `bin/spec-index` falls back to `specs/` when `openspec/specs/` is absent.
+
+### With a Custom Layout
+
+Any structure matching `<specs-dir>/<spec-id>/spec.md` works. Pass the path explicitly if it is not auto-detected:
+
+```bash
+bin/spec-index build path/to/my-specs
+```
+
+Summary extraction falls back to the first non-blank text line after the title heading.
+
+---
+
 ## Requirements
 
 - Specs must follow the `<specs-dir>/<spec-id>/spec.md` directory structure
-- Each spec should open with a 1–3 sentence summary paragraph between the `# Title` line and the first `---` separator — the CLI and skills use this to extract summaries
 - No external dependencies beyond standard POSIX tools (`find`, `awk`, `grep`, `wc`)
-
-Works alongside [OpenSpec](https://github.com/openspec) and [Spec Kit](https://github.com/github/spec-kit). Any spec library using the `<dir>/<spec-id>/spec.md` layout is compatible — both tools use this structure. Summary extraction handles both OpenSpec (opening paragraph before `---`) and Spec Kit (`# Feature Specification:` title + first User Story) formats automatically.
 
 ---
 
