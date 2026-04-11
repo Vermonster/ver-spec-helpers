@@ -113,13 +113,22 @@ specs:
       - lib/auth/
 ```
 
-`index.yaml` is **never edited by hand** — it is generated and refreshed automatically by the skills or via the included CLI. Commit it alongside your specs so agents always have a starting point without rebuilding.
+`index.yaml` is **never edited by hand** — it is generated and refreshed automatically by the skills or via the `bin/spec-index` CLI (installed separately, see below). Commit it alongside your specs so agents always have a starting point without rebuilding.
 
 ---
 
 ## CLI: `bin/spec-index`
 
 A portable shell script for deterministic index management. Zero dependencies — works on Mac, Linux, and BSD.
+
+The CLI is **not bundled by `npx skills add`** — install it separately into your repo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Vermonster/spec-contextualize/main/bin/spec-index \
+  -o bin/spec-index && chmod +x bin/spec-index
+```
+
+Commit it alongside your specs so the whole team and CI have access.
 
 ```bash
 # Build or rebuild the index
