@@ -2,7 +2,7 @@
 
 Skills to help agents load only the specs relevant to a task, and keep a growing spec library healthy over time.
 
-As a spec library grows, loading all of them into an agent's context window becomes a liability — noise accumulates, performance degrades, and relevance drops. These two skills fix that. They work with any project that stores specs as markdown files in a consistent directory structure — whether you use [OpenSpec](https://github.com/openspec), [Spec Kit](https://github.com/github/spec-kit), or your own convention.
+As a spec library grows, loading all of them into an agent's context window becomes a liability — noise accumulates, performance degrades, and relevance drops. These two skills fix that. They work with any project that stores specs as markdown files in a consistent directory structure — whether you use [OpenSpec](https://github.com/openspec) or your own convention.
 
 ```bash
 npx skills add Vermonster/spec-contextualize
@@ -130,7 +130,7 @@ bin/spec-index check || { echo "spec index is stale — run bin/spec-index build
 - Each spec should open with a 1–3 sentence summary paragraph between the `# Title` line and the first `---` separator — the CLI and skills use this to extract summaries
 - No external dependencies beyond standard POSIX tools (`find`, `awk`, `grep`, `wc`)
 
-Works alongside [OpenSpec](https://github.com/openspec) and [Spec Kit](https://github.com/github/spec-kit) but is not specific to either. Any spec library using the `<dir>/<spec-id>/spec.md` layout is compatible.
+Works alongside [OpenSpec](https://github.com/openspec) but is not specific to it. Any spec library using the `<dir>/<spec-id>/spec.md` layout is compatible.
 
 ---
 
