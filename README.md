@@ -66,6 +66,28 @@ To install globally (available across all projects):
 npx skills add Vermonster/spec-contextualize --global
 ```
 
+### Signaling to agents
+
+Installing the skills makes them available, but adding a note to your repo's agent instructions file ensures agents reach for `ver-spec-context` proactively — before starting any spec-driven task — rather than only when explicitly asked.
+
+Add a line to whichever file your agent runtime reads:
+
+| Runtime | File |
+|---|---|
+| Claude / Codex / most agents | `AGENTS.md` |
+| Claude (project-level) | `CLAUDE.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Cursor | `.cursorrules` |
+
+Suggested wording:
+
+```markdown
+Before starting any task that involves specs, invoke the `ver-spec-context` skill
+to load only the specs relevant to the work at hand.
+```
+
+`ver-spec-health` does not need this — it is always invoked explicitly.
+
 ---
 
 ## The Index
