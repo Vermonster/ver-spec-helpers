@@ -45,7 +45,14 @@ Build the list of all spec IDs (directory names). Note total count.
 
 ### 3. Ensure Index Is Current
 
-Check `<specs_dir>/index.yaml` freshness per [shared/index-format.md](../shared/index-format.md). Rebuild if stale. The index provides token estimates and path references for all three analyses.
+**Preferred**: Use the CLI if available:
+```bash
+spec-index check <specs_dir> || spec-index build <specs_dir>
+```
+
+**Fallback**: Check `<specs_dir>/index.yaml` freshness per [shared/index-format.md](../shared/index-format.md) and rebuild if stale.
+
+The index provides token estimates and path references for all three analyses.
 
 ### 4. Run the Three Analyses
 

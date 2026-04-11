@@ -30,9 +30,12 @@ Set `<specs_dir>` to the located path.
 
 ### 2. Check Index Freshness
 
-Read `<specs_dir>/index.yaml` if it exists.
+**Preferred**: If `spec-index` is available in `PATH` or at `bin/spec-index` from the repo root, use it:
+```bash
+spec-index check <specs_dir>   # exits 0 if current, exits 1 if stale/missing
+```
 
-Determine if it is stale:
+**Fallback** (agent-native check): Read `<specs_dir>/index.yaml` if it exists and determine if it is stale:
 - File does not exist
 - Any `spec.md` has a modification time newer than the index's `generated_at` timestamp:
   ```bash
@@ -44,7 +47,12 @@ If stale or missing, proceed to **Step 3**. Otherwise skip to **Step 4**.
 
 ### 3. Build the Index
 
-Follow the build procedure in [shared/index-format.md](../shared/index-format.md) to generate `<specs_dir>/index.yaml`.
+**Preferred**: Run the CLI — it is faster and more reliable than agent-native building:
+```bash
+spec-index build <specs_dir>
+```
+
+**Fallback**: Follow the build procedure in [shared/index-format.md](../shared/index-format.md) to generate `<specs_dir>/index.yaml`.
 
 Announce: "Building spec index…" and report how many specs were indexed on completion.
 
