@@ -1,6 +1,8 @@
 # spec-contextualize
 
-Agent skills for managing spec library context as your [OpenSpec](https://github.com/openspec) library grows. As the number of specs increases, loading all of them into an agent's context window becomes a liability — noise accumulates, performance degrades, and relevance drops. These two skills fix that.
+Skills to help agents load only the specs relevant to a task, and keep a growing spec library healthy over time.
+
+As a spec library grows, loading all of them into an agent's context window becomes a liability — noise accumulates, performance degrades, and relevance drops. These two skills fix that. They work with any project that stores specs as markdown files in a consistent directory structure — whether you use [OpenSpec](https://github.com/openspec) or your own convention.
 
 ```bash
 npx skills add Vermonster/spec-contextualize
@@ -17,7 +19,7 @@ Load only the specs your current task actually needs.
 At the start of any spec-driven task, this skill reads a compact auto-generated `index.yaml` — a terse catalog of every spec with a one-sentence summary, token estimate, domain tag, and referenced code paths — then selects only the specs relevant to the work at hand. Everything else stays off the context window.
 
 **What it does:**
-1. Locates the specs directory (`openspec/specs/`, `specs/`, or nearest equivalent)
+1. Locates the specs directory (`openspec/specs/`, `specs/`, or any directory containing `spec.md` files)
 2. Checks freshness of `index.yaml`; rebuilds it if stale
 3. Reads the index (~100 lines regardless of spec library size)
 4. Scores specs by path overlap, domain match, and keyword relevance
@@ -111,7 +113,7 @@ bin/spec-index list [<specs-dir>]
 bin/spec-index stats [<specs-dir>]
 ```
 
-`<specs-dir>` is auto-detected if omitted (looks for `openspec/specs/` then `specs/`).
+`<specs-dir>` is auto-detected if omitted (looks for `openspec/specs/`, then `specs/`, then any directory containing `spec.md` files).
 
 **Pre-commit hook example:**
 
@@ -125,15 +127,15 @@ bin/spec-index check || { echo "spec index is stale — run bin/spec-index build
 ## Requirements
 
 - Specs must follow the `<specs-dir>/<spec-id>/spec.md` directory structure
-- Each spec should open with a 1–3 sentence summary paragraph between the `# Title` line and the first `---` separator (the CLI and skills use this invariant to extract summaries)
-- No external CLI dependencies beyond standard POSIX tools (`find`, `awk`, `grep`, `wc`)
-- Compatible with [OpenSpec](https://github.com/openspec) conventions but not limited to them
+- Each spec should open with a 1–3 sentence summary paragraph between the `# Title` line and the first `---` separator — the CLI and skills use this to extract summaries
+- No external dependencies beyond standard POSIX tools (`find`, `awk`, `grep`, `wc`)
+
+Works alongside [OpenSpec](https://github.com/openspec) but is not specific to it. Any spec library using the `<dir>/<spec-id>/spec.md` layout is compatible.
 
 ---
 
-## Related
+## Reference
 
-- [`ver-spec-health`](skills/ver-spec-health/SKILL.md) complements rather than replaces quality-focused audit skills (e.g., `openspec-evaluate-specs`). Health targets efficiency — token load, structural staleness, and overlap. Evaluate targets content quality — retention policy, completeness, accuracy.
-- Index schema and build algorithm reference: [`skills/shared/index-format.md`](skills/shared/index-format.md)
-- Detailed analysis algorithms: [`skills/ver-spec-health/references/analysis-procedures.md`](skills/ver-spec-health/references/analysis-procedures.md)
+- Index schema and build algorithm: [`skills/shared/index-format.md`](skills/shared/index-format.md)
+- Health analysis algorithms: [`skills/ver-spec-health/references/analysis-procedures.md`](skills/ver-spec-health/references/analysis-procedures.md)
 
