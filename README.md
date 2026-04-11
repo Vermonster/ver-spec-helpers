@@ -115,6 +115,8 @@ bin/spec-index stats   # token budget and domain breakdown
 
 ## Reference
 
+These files are part of the source repo and are not installed by `npx skills add`:
+
 - Index schema and build algorithm: [`skills/shared/index-format.md`](skills/shared/index-format.md)
 - Health analysis algorithms: [`skills/ver-spec-health/references/analysis-procedures.md`](skills/ver-spec-health/references/analysis-procedures.md)
 
