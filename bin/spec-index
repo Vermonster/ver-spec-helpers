@@ -93,15 +93,34 @@ cmd_build() {
       # Domain: first hyphen-delimited word of the spec id.
       domain=$(printf '%s\n' "$id" | cut -d'-' -f1)
 
-      # Summary: first non-blank, non-heading line between the title (# …)
-      # and the first --- separator. Strip markdown formatting and truncate.
-      summary=$(awk '
-        /^# /    { found=1; next }
-        found && /^---/ { exit }
-        found && /^#/   { exit }
-        found && NF     { print; exit }
-      ' "$spec_file" | strip_markdown | tr -s ' ' | sed 's/^[[:space:]]*//' | awk '{print substr($0,1,200)}')
-
+      # Summary: two formats are supported.
+      # Format A (OpenSpec): first non-blank text between # Title and first ---
+      # Format B (Spec Kit): "# Feature Specification: NAME" — extract name
+      #                      and append first plain-text sentence from User Story 1
+      if grep -q '^# Feature Specification:' "$spec_file" 2>/dev/null; then
+        feature_name=$(awk '/^# Feature Specification:/ {
+          sub(/^# Feature Specification:[ ]*/, ""); print; exit
+        }' "$spec_file")
+        story_text=$(awk '
+          /^### User Story 1/ { found=1; next }
+          found && /^\*\*/ { next }
+          found && /^[A-Za-z]/ && NF { print; exit }
+        ' "$spec_file")
+        if [ -n "$story_text" ]; then
+          summary=$(printf '%s — %s' "$feature_name" "$story_text" \
+            | strip_markdown | tr -s ' ' | awk '{print substr($0,1,200)}')
+        else
+          summary=$(printf '%s' "$feature_name" \
+            | strip_markdown | tr -s ' ' | awk '{print substr($0,1,200)}')
+        fi
+      else
+        summary=$(awk '
+          /^# /    { found=1; next }
+          found && /^---/ { exit }
+          found && /^#/   { exit }
+          found && NF     { print; exit }
+        ' "$spec_file" | strip_markdown | tr -s ' ' | sed 's/^[[:space:]]*//' | awk '{print substr($0,1,200)}')
+      fi
       # Token estimate: file size in bytes / 4, rounded to nearest 10.
       chars=$(wc -c < "$spec_file" | awk '{print $1}')
       tokens=$(( ((chars / 4) + 5) / 10 * 10 ))

@@ -52,7 +52,9 @@ Agents follow this procedure to generate or refresh `index.yaml`:
 2. **For each spec file**, extract:
    - **id**: the directory name containing the spec (`basename $(dirname <path>)`)
    - **title line**: first line matching `^# `
-   - **summary**: all non-empty lines between the title line and the first `---` separator, joined and stripped of markdown formatting (backticks, bold, links). Trim to ≤200 characters.
+   - **summary**: extracted using format detection:
+     - **Spec Kit format** (title starts with `# Feature Specification:`): feature name from the title + first plain-text sentence from `### User Story 1`, joined with ` — `
+     - **OpenSpec / custom format**: first non-blank text between the `# Title` line and the first `---` separator; max 200 characters
    - **token_estimate**: `wc -c < <path>` divided by 4, rounded to nearest 10
    - **paths**: all backtick-quoted tokens containing `/` that don't start with `http`, deduplicated
 
