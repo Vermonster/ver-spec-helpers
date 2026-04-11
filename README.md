@@ -8,6 +8,12 @@ As a spec library grows, loading all of them into an agent's context window beco
 npx skills add Vermonster/spec-contextualize
 ```
 
+```bash
+# Also install the CLI into your repo (recommended)
+curl -fsSL https://raw.githubusercontent.com/Vermonster/spec-contextualize/main/bin/spec-index \
+  -o bin/spec-index && chmod +x bin/spec-index
+```
+
 ---
 
 ## Skills
@@ -120,15 +126,6 @@ specs:
 ## CLI: `bin/spec-index`
 
 A portable shell script for deterministic index management. Zero dependencies — works on Mac, Linux, and BSD.
-
-The CLI is **not bundled by `npx skills add`** — install it separately into your repo:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Vermonster/spec-contextualize/main/bin/spec-index \
-  -o bin/spec-index && chmod +x bin/spec-index
-```
-
-Commit it alongside your specs so the whole team and CI have access.
 
 ```bash
 # Build or rebuild the index
