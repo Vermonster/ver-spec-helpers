@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Generated index files (optional — commit index.yaml if you want agents to have a baseline)
+# openspec/specs/index.yaml
+# specs/index.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp
+*.tmp
+*.bak
