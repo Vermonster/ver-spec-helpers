@@ -99,6 +99,59 @@ For each flagged pair, include:
 
 ---
 
+## Consolidation Drafting
+
+**Goal**: Produce a merged spec from two overlap candidates that preserves all unique invariants and eliminates duplication.
+
+### Merging Rules
+
+1. **Title**: Use the broader spec's title, or draft a new title that covers the combined scope
+2. **ID**: Use the broader spec's ID, or propose a new ID if scope meaningfully changes
+3. **Invariants**: Merge bullet lists by deduplication
+   - Identical rules (after normalization): keep one instance
+   - Contradictory rules: flag explicitly — do not silently drop either; present both for human resolution
+   - Complementary rules: keep both, reorder for logical flow
+4. **Paths**: Union of both `paths` sets, deduplicated
+5. **Sections**: Use the superset of sections; merge content under matching headings
+6. **Cross-references**: Remove any references between the two specs being merged (e.g., "see auth-token for details" when auth-token is the other spec being merged)
+7. **Never invent**: Do not add new constraints, behavior, or context that doesn't exist in either source spec
+
+### Normalization for Deduplication
+
+Two invariant statements are considered duplicates if, after lowercasing and removing punctuation, they share ≥ 80% of their significant words (excluding stop words). When in doubt, keep both and note the similarity.
+
+### Draft Output Format
+
+```markdown
+# <Merged Title>
+
+<merged opening summary — 1–3 sentences covering the combined scope>
+
+---
+
+## <Section>
+
+- <deduplicated invariants>
+
+## <Section>
+
+...
+```
+
+Append a `<!-- consolidation notes -->` block at the end of the draft (remove before finalizing):
+
+```markdown
+<!-- consolidation notes
+Merged from: spec-a, spec-b
+Dropped duplicates:
+  - "X" (appeared in both)
+Potential conflicts (needs human review):
+  - spec-a says X; spec-b says Y
+-->
+```
+
+---
+
 ## Context Bloat Assessment
 
 **Goal**: Identify specs consuming disproportionate context budget.

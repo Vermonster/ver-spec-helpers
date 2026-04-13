@@ -1,6 +1,6 @@
 ---
 name: ver-spec-health
-description: Audit spec library health — find stale specs, overlapping content, and context bloat. Runs in analysis mode by default; write mode applies approved changes. Use periodically as a maintenance task or when specs feel unwieldy.
+description: Audit spec library health — find stale specs, overlapping content, consolidation candidates, and context bloat. Runs in analysis mode by default; write mode applies approved changes including merging overlapping specs. Use periodically as a maintenance task or when specs feel unwieldy.
 license: MIT
 compatibility: Works with any project that has spec files in a consistent directory structure. Framework-agnostic.
 metadata:
@@ -71,14 +71,29 @@ test -e <path> && echo "exists" || echo "missing"
 Flag a spec as **drifted** if more than half its referenced paths no longer exist.
 Flag a spec as **partially drifted** if 1–50% of its paths are missing.
 
-#### Analysis B: Content Overlap
+#### Analysis B: Content Overlap & Consolidation Candidates
 
-For each pair of specs:
-1. Extract the set of h2/h3 headings from each spec
-2. Compute the overlap ratio: `shared_headings / min(headings_a, headings_b)`
-3. Flag pairs with overlap ratio ≥ 0.5 as **overlap candidates**
+Overlap detection runs in two passes to separate cheap structural signals from deeper content analysis.
 
-Also flag specs whose `summary` shares ≥ 4 significant words with another spec's summary (after removing stop words).
+**Pass 1 — Structural signals (all pairs):**
+1. Extract normalized h2/h3 headings from each spec
+2. Compute `overlap = shared_headings / min(headings_A, headings_B)`
+3. Compare summaries: tokenize, remove stop words, count shared significant words
+4. Only compare pairs within the same `domain` (cross-domain heading overlap is noise)
+
+Flag pairs for Pass 2 if: heading overlap ≥ 0.5 OR shared summary words ≥ 4.
+
+**Pass 2 — Content analysis (flagged pairs only):**
+
+Read both specs in full. For each flagged pair, assess:
+- **Invariant overlap**: Do both specs assert the same rules about the same behavior?
+- **Path overlap**: Do `paths` entries point to the same directories or modules?
+- **Scope relationship**: Is one spec a subset/superset of the other, or do they cover adjacent layers of the same feature?
+
+Assign a consolidation priority:
+- 🔴 **HIGH**: Same paths + heading overlap ≥ 0.7 + shared invariants → strong merge candidate
+- 🟡 **MEDIUM**: Heading overlap ≥ 0.5 + adjacent scope → worth consolidating with care
+- ⚪ **LOW**: Summary overlap only, or different layers of same concept → flag for human review, don't recommend automatic merge
 
 #### Analysis C: Context Bloat
 
@@ -114,13 +129,15 @@ Output the full analysis in this structure:
 
 ---
 
-### B. Content Overlap
+### B. Content Overlap & Consolidation Candidates
 
-| Spec A | Spec B | Overlap | Shared Headings |
-|--------|--------|---------|-----------------|
-| spec-a | spec-b | 67% | Key Invariants, Schema, Service Functions |
+| Priority | Spec A | Spec B | Heading Overlap | Shared Paths | Notes |
+|----------|--------|--------|-----------------|--------------|-------|
+| 🔴 HIGH | spec-a | spec-b | 72% | lib/auth/ | Same invariants, same paths — clear merge |
+| 🟡 MEDIUM | spec-c | spec-d | 55% | — | Adjacent scope, different layers |
+| ⚪ LOW | spec-e | spec-f | — | — | Summary overlap only |
 
-**Recommendation**: Consider consolidating spec-a and spec-b.
+**Recommendation**: [spec-a + spec-b] → merge into a single spec. [spec-c + spec-d] → review for potential merge.
 
 ---
 
@@ -146,7 +163,9 @@ Index status: ✅ Current  /  ⚠️ Stale (rebuilt during this run)  /  🔴 Mi
 
 - 🔴 N specs fully drifted (removal candidates)
 - 🟡 N specs partially drifted (path updates needed)
-- ⚠️ N overlap pairs (consolidation candidates)
+- 🔴 N HIGH consolidation candidates (strong merge)
+- 🟡 N MEDIUM consolidation candidates (review recommended)
+- ⚪ N LOW overlap flags (informational)
 - ⚠️ N oversized specs
 - ✅ N specs healthy
 ```
@@ -205,12 +224,52 @@ Apply the edit, then rebuild the index entry.
 
 #### Consolidation Workflow
 
-For each flagged overlap pair, offer to:
-1. Show both specs side by side for human review
-2. Draft a consolidated spec (merged content, deduped invariants)
-3. Apply the consolidated spec and remove the originals (requires explicit confirmation)
+For each HIGH or MEDIUM priority overlap pair, work through one at a time:
 
-Consolidation is higher-risk than removal — always show the draft before writing.
+**Step 1 — Confirm scope**
+```
+Consolidating: spec-a + spec-b
+Heading overlap: 72% | Shared paths: lib/auth/
+
+Both specs assert rules about session lifecycle and token expiry.
+spec-b appears to be a subset of spec-a with 3 additional invariants.
+
+Proceed with consolidation? (yes / no / skip to next pair)
+```
+
+**Step 2 — Draft the merged spec**
+
+Read both specs in full, then produce a draft merged spec:
+- Use the broader spec's title and ID as the base (or propose a new ID if the scope changes)
+- Merge invariant lists: deduplicate identical rules, preserve all unique rules from both specs
+- Merge `paths` references: union of both sets, deduplicated
+- Preserve the more detailed explanation where the two specs conflict
+- Do not add new content — consolidation only, no invention
+- Note what was dropped with a brief reason (e.g., "removed duplicate constraint already stated above")
+
+**Step 3 — Present and confirm**
+```
+## Draft: auth-session (merged from auth-session + auth-token)
+
+[full draft spec content]
+
+---
+Dropped from auth-token (duplicates in auth-session):
+  - "Sessions expire after 30 minutes of inactivity" (line 14)
+
+Dropped from auth-session (superseded):
+  - "See auth-token for token lifecycle" (line 8) — no longer a separate spec
+
+Apply this consolidation? (yes / edit first / no)
+```
+
+**Step 4 — Apply**
+
+On confirmation:
+1. Write the merged spec to `<specs_dir>/<id>/spec.md`
+2. Remove the source spec directories that were merged away
+3. Rebuild the index entry for the merged spec
+4. Report which spec IDs were removed
 
 #### After All Changes
 

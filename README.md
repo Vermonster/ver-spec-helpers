@@ -57,7 +57,7 @@ Load only the specs your current task actually needs. Reads a compact auto-gener
 
 Audit your spec library for:
 - **Relevance drift** — specs referencing code paths that no longer exist
-- **Content overlap** — spec pairs with ≥ 50% shared heading structure
+- **Content overlap** — spec pairs with ≥ 50% shared heading structure, prioritized by merge confidence
 - **Context bloat** — specs exceeding 800 estimated tokens
 
 Analysis mode is always read-only. Write mode applies changes only after explicit confirmation per category.
