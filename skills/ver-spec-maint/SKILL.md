@@ -1,5 +1,5 @@
 ---
-name: ver-spec-health
+name: ver-spec-maint
 description: Audit spec library health — find stale specs, overlapping content, consolidation candidates, and context bloat. Runs in analysis mode by default; write mode applies approved changes including merging overlapping specs. Use periodically as a maintenance task or when specs feel unwieldy.
 license: MIT
 compatibility: Works with any project that has spec files in a consistent directory structure. Framework-agnostic.
@@ -50,7 +50,7 @@ Build the list of all spec IDs (directory names). Note total count.
 spec-index check <specs_dir> || spec-index build <specs_dir>
 ```
 
-**Fallback**: Check `<specs_dir>/index.yaml` — stale if missing, if any `spec.md` is newer than `generated_at`, or if spec count differs from index entry count. Rebuild if stale using the same procedure as `ver-spec-context` Step 3.
+**Fallback**: Check `<specs_dir>/index.yaml` — stale if missing, if any `spec.md` is newer than `generated_at`, or if spec count differs from index entry count. Rebuild if stale using the same procedure as `ver-spec-search` Step 3.
 
 The index provides token estimates and path references for all three analyses.
 

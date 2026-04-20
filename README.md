@@ -1,4 +1,4 @@
-# spec-contextualize
+# ver-spec-helpers
 
 Skills to help agents load only the specs relevant to a task, and keep a growing spec library healthy over time.
 
@@ -9,25 +9,25 @@ As a spec library grows, loading every spec floods the context window with irrel
 ## Installation
 
 ```bash
-npx skills add Vermonster/spec-contextualize
+npx skills add Vermonster/ver-spec-helpers
 ```
 
 ```bash
 # Also install the CLI into your repo (recommended)
-curl -fsSL https://raw.githubusercontent.com/Vermonster/spec-contextualize/main/bin/spec-index \
+curl -fsSL https://raw.githubusercontent.com/Vermonster/ver-spec-helpers/main/bin/spec-index \
   -o bin/spec-index && chmod +x bin/spec-index
 ```
 
 To install globally or a single skill:
 
 ```bash
-npx skills add Vermonster/spec-contextualize --global
-npx skills add Vermonster/spec-contextualize --skill ver-spec-context
+npx skills add Vermonster/ver-spec-helpers --global
+npx skills add Vermonster/ver-spec-helpers --skill ver-spec-search
 ```
 
 ### Signaling to agents
 
-Add a line to your repo's agent instructions file so agents invoke `ver-spec-context` proactively at task start:
+Add a line to your repo's agent instructions file so agents invoke `ver-spec-search` proactively at task start:
 
 | Runtime | File |
 |---|---|
@@ -37,23 +37,23 @@ Add a line to your repo's agent instructions file so agents invoke `ver-spec-con
 | Cursor | `.cursorrules` |
 
 ```markdown
-Before starting any task that involves specs, invoke the `ver-spec-context` skill
+Before starting any task that involves specs, invoke the `ver-spec-search` skill
 to load only the specs relevant to the work at hand.
 ```
 
-`ver-spec-health` does not need this — it is always invoked explicitly.
+`ver-spec-maint` does not need this — it is always invoked explicitly.
 
 ---
 
 ## Skills
 
-### `ver-spec-context` — Focused Context Loading
+### `ver-spec-search` — Focused Context Loading
 
 Load only the specs your current task actually needs. Reads a compact auto-generated `index.yaml` to select relevant specs by path overlap, domain, and keyword match — targeting ≤ 4,000 tokens. Reports what was loaded and what was skipped.
 
 **Invoke**: *"Load spec context for this task"* or just start a task.
 
-### `ver-spec-health` — Spec Library Maintenance
+### `ver-spec-maint` — Spec Library Maintenance
 
 Audit your spec library for:
 - **Relevance drift** — specs referencing code paths that no longer exist
@@ -118,5 +118,5 @@ bin/spec-index stats   # token budget and domain breakdown
 These files are part of the source repo and are not installed by `npx skills add`:
 
 - Index schema and build algorithm: [`skills/shared/index-format.md`](skills/shared/index-format.md)
-- Health analysis algorithms: [`skills/ver-spec-health/references/analysis-procedures.md`](skills/ver-spec-health/references/analysis-procedures.md)
+- Health analysis algorithms: [`skills/ver-spec-maint/references/analysis-procedures.md`](skills/ver-spec-maint/references/analysis-procedures.md)
 
