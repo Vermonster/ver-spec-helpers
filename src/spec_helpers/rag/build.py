@@ -35,6 +35,7 @@ CHUNK_SIZE: int = int(os.environ.get("SPEC_CHUNK_SIZE", "900"))
 CHUNK_OVERLAP: int = int(os.environ.get("SPEC_CHUNK_OVERLAP", "150"))
 
 
+def chunk_text(
     text: str,
     size: int = CHUNK_SIZE,
     overlap: int = CHUNK_OVERLAP,
