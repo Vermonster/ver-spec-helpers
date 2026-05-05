@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from spec_helpers.rag import rag_index_dir, resolve_model
+from spec_helpers.rag import rag_index_dir, ensure_model
 
 
 def load_index(specs_dir: Path) -> tuple[list[dict], np.ndarray]:
@@ -47,16 +47,7 @@ def load_model(specs_dir: Path) -> SentenceTransformer:
     model_id = "sentence-transformers/all-MiniLM-L6-v2"
     if manifest_path.exists():
         model_id = json.loads(manifest_path.read_text()).get("model", model_id)
-    resolved = resolve_model(model_id)
-    if resolved == model_id:
-        print(
-            f"loading {model_id} via HF Hub\n"
-            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
-            "and avoid this network call",
-            file=sys.stderr,
-        )
-    else:
-        print(f"loading model from {resolved}", file=sys.stderr)
+    resolved = ensure_model(model_id)
     return SentenceTransformer(resolved)
 
 

@@ -89,20 +89,10 @@ def main() -> None:  # noqa: C901
 
     elif args.command == "rag-build":
         from sentence_transformers import SentenceTransformer
-        from spec_helpers.rag import resolve_model
+        from spec_helpers.rag import ensure_model
         from spec_helpers.rag.build import MODEL_ID, build_index
         specs_dir = require_specs_dir(args.specs_dir)
-        resolved = resolve_model(MODEL_ID)
-        if resolved == MODEL_ID:
-            print(
-                f"loading {MODEL_ID} via HF Hub\n"
-                "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
-                "and avoid this network call",
-                file=sys.stderr,
-            )
-        else:
-            print(f"loading model from {resolved}", file=sys.stderr)
-        build_index(specs_dir, SentenceTransformer(resolved))
+        build_index(specs_dir, SentenceTransformer(ensure_model(MODEL_ID)))
 
     elif args.command == "rag-search":
         from spec_helpers.rag.search import search

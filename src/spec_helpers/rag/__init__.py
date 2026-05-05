@@ -67,3 +67,29 @@ def resolve_model(model_id: str) -> str:
             return str(candidate)
 
     return model_id
+
+
+def ensure_model(model_id: str) -> str:
+    """Return a local model path, downloading to .ver-spec-helpers/models/ if needed.
+
+    Called by ``rag-build`` so the model is always stored locally after the
+    first index build. Subsequent ``rag-build`` and ``rag-search`` calls find
+    the local copy via :func:`resolve_model` and make no network requests.
+    """
+    resolved = resolve_model(model_id)
+    if resolved != model_id:
+        print(f"loading model from {resolved}", file=sys.stderr)
+        return resolved
+
+    # Not cached locally — download and save
+    from sentence_transformers import SentenceTransformer  # lazy import
+
+    model_name = model_id.split("/")[-1]
+    local_path = ver_spec_home() / "models" / model_name
+    print(
+        f"downloading {model_id} to {local_path} (one-time setup)…",
+        file=sys.stderr,
+    )
+    SentenceTransformer(model_id).save(str(local_path))
+    print(f"✓  model saved to {local_path}", file=sys.stderr)
+    return str(local_path)

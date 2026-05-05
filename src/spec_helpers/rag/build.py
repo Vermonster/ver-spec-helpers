@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from spec_helpers.rag import rag_index_dir, resolve_model
+from spec_helpers.rag import rag_index_dir, ensure_model
 
 MODEL_ID: str = os.environ.get(
     "SPEC_RAG_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
@@ -110,16 +110,7 @@ def main() -> None:
     if not specs_dir.is_dir():
         print(f"error: not a directory: {specs_dir}", file=sys.stderr)
         sys.exit(1)
-    resolved = resolve_model(MODEL_ID)
-    if resolved == MODEL_ID:
-        print(
-            f"loading {MODEL_ID} via HF Hub\n"
-            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
-            "and avoid this network call",
-            file=sys.stderr,
-        )
-    else:
-        print(f"loading model from {resolved}", file=sys.stderr)
+    resolved = ensure_model(MODEL_ID)
     build_index(specs_dir, SentenceTransformer(resolved))
 
 

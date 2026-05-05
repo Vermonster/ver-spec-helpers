@@ -59,6 +59,20 @@ def resolve_model(model_id: str) -> str:
     return model_id
 
 
+def ensure_model(model_id: str) -> str:
+    resolved = resolve_model(model_id)
+    if resolved != model_id:
+        print(f"loading model from {resolved}", file=sys.stderr)
+        return resolved
+    from sentence_transformers import SentenceTransformer  # lazy import
+    model_name = model_id.split("/")[-1]
+    local_path = ver_spec_home() / "models" / model_name
+    print(f"downloading {model_id} to {local_path} (one-time setup)\u2026", file=sys.stderr)
+    SentenceTransformer(model_id).save(str(local_path))
+    print(f"\u2713  model saved to {local_path}", file=sys.stderr)
+    return str(local_path)
+
+
 # ── core functions ─────────────────────────────────────────────────────────────
 
 
@@ -88,16 +102,7 @@ def load_model(specs_dir: Path) -> SentenceTransformer:
     model_id = "sentence-transformers/all-MiniLM-L6-v2"
     if manifest_path.exists():
         model_id = json.loads(manifest_path.read_text()).get("model", model_id)
-    resolved = resolve_model(model_id)
-    if resolved == model_id:
-        print(
-            f"loading {model_id} via HF Hub\n"
-            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
-            "and avoid this network call",
-            file=sys.stderr,
-        )
-    else:
-        print(f"loading model from {resolved}", file=sys.stderr)
+    resolved = ensure_model(model_id)
     return SentenceTransformer(resolved)
 
 

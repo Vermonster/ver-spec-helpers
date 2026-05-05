@@ -66,11 +66,20 @@ def resolve_model(model_id: str) -> str:
             return str(candidate)
     return model_id
 
+def ensure_model(model_id: str) -> str:
+    resolved = resolve_model(model_id)
+    if resolved != model_id:
+        print(f"loading model from {resolved}", file=sys.stderr)
+        return resolved
+    from sentence_transformers import SentenceTransformer  # lazy import
+    model_name = model_id.split("/")[-1]
+    local_path = ver_spec_home() / "models" / model_name
+    print(f"downloading {model_id} to {local_path} (one-time setup)\u2026", file=sys.stderr)
+    SentenceTransformer(model_id).save(str(local_path))
+    print(f"\u2713  model saved to {local_path}", file=sys.stderr)
+    return str(local_path)
 
-# ── core functions ─────────────────────────────────────────────────────────────
 
-
-def chunk_text(
     text: str,
     size: int = CHUNK_SIZE,
     overlap: int = CHUNK_OVERLAP,
@@ -153,16 +162,7 @@ def main() -> None:
         print(f"error: not a directory: {specs_dir}", file=sys.stderr)
         sys.exit(1)
 
-    resolved = resolve_model(MODEL_ID)
-    if resolved == MODEL_ID:
-        print(
-            f"loading {MODEL_ID} via HF Hub\n"
-            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
-            "and avoid this network call",
-            file=sys.stderr,
-        )
-    else:
-        print(f"loading model from {resolved}", file=sys.stderr)
+    resolved = ensure_model(MODEL_ID)
     build_index(specs_dir, SentenceTransformer(resolved))
 
 
