@@ -10,10 +10,12 @@ usage() {
 spec-index — manage the spec library context index
 
 Commands:
-  build [<specs-dir>]   Parse all spec files and write index.yaml
-  check [<specs-dir>]   Exit 1 if index is missing or stale (for CI / pre-commit)
-  list  [<specs-dir>]   Print id, domain, and summary for each spec
-  stats [<specs-dir>]   Show token budget and domain breakdown
+  build [<specs-dir>]              Parse all spec files and write index.yaml
+  check [<specs-dir>]              Exit 1 if index is missing or stale (for CI / pre-commit)
+  list  [<specs-dir>]              Print id, domain, and summary for each spec
+  stats [<specs-dir>]              Show token budget and domain breakdown
+  coverage [<specs-dir>]           Show signal richness per spec
+  eval "<query>" [<specs-dir>]     Score specs against a query; simulate selection
 
 <specs-dir> is auto-detected if omitted (looks for openspec/specs/ then specs/).
 EOF
@@ -242,16 +244,39 @@ cmd_stats() {
     | awk 'NR<=5 { printf "  %-40s ~%s tokens\n", $2, $1 }'
 }
 
+cmd_coverage() {
+  specs_dir=$(require_specs_dir "${1:-}")
+  index_file="$specs_dir/index.yaml"
+  if [ ! -f "$index_file" ]; then
+    printf 'error: index.yaml not found \u2014 run: spec-index build %s\n' "$specs_dir" >&2
+    exit 1
+  fi
+  total=$(grep -c '^  - id:' "$index_file" 2>/dev/null || printf '0')
+  no_sym=$(awk '/^  - id:/{id=$3} /^    symbols: \[\]/{print id}' "$index_file" | wc -l | tr -d ' ')
+  no_hdg=$(awk '/^  - id:/{id=$3} /^    headings: \[\]/{print id}' "$index_file" | wc -l | tr -d ' ')
+  printf 'Signal coverage: %s  (%s specs)\n' "$index_file" "$total"
+  printf '  specs with no symbols:  %s\n' "$no_sym"
+  printf '  specs with no headings: %s\n' "$no_hdg"
+  printf '\nFor full per-spec breakdown: pipx install ver-spec-helpers && spec-index coverage %s\n' "$specs_dir"
+}
+
+cmd_eval() {
+  printf 'eval requires the Python CLI: pipx install git+https://github.com/Vermonster/ver-spec-helpers\n' >&2
+  exit 1
+}
+
 # ── dispatch ─────────────────────────────────────────────────────────────────
 
 COMMAND="${1:-}"
 shift 2>/dev/null || true
 
 case "$COMMAND" in
-  build) cmd_build "$@" ;;
-  check) cmd_check "$@" ;;
-  list)  cmd_list  "$@" ;;
-  stats) cmd_stats "$@" ;;
+  build)    cmd_build    "$@" ;;
+  check)    cmd_check    "$@" ;;
+  list)     cmd_list     "$@" ;;
+  stats)    cmd_stats    "$@" ;;
+  coverage) cmd_coverage "$@" ;;
+  eval)     cmd_eval     "$@" ;;
   help|--help|-h|"") usage ;;
   *) printf 'error: unknown command: %s\n\n' "$COMMAND" >&2; usage; exit 1 ;;
 esac
