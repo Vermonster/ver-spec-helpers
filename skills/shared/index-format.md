@@ -6,57 +6,40 @@
 
 ---
 
-## RAG Index
+## Schema
 
-The RAG index lives alongside `index.yaml` at `<specs_dir>/rag/` and enables semantic (vector) search. It is built separately from the YAML index and is optional — skills fall back to keyword/domain selection when it is absent.
-
-```
-<specs_dir>/
-  index.yaml           ← always present; keyword/domain metadata
-  rag/
-    chunks.jsonl       ← one JSON object per text chunk
-    embeddings.npy     ← float32 matrix; rows match chunks.jsonl
-    manifest.json      ← build metadata
-```
-
-### chunks.jsonl
-
-One JSON object per line, in the same order as the rows of `embeddings.npy`:
-
-```json
-{"id": "auth-session#0000", "spec_id": "auth-session", "path": "openspec/specs/auth-session/spec.md", "start": 0, "text": "..."}
-{"id": "auth-session#0001", "spec_id": "auth-session", "path": "openspec/specs/auth-session/spec.md", "start": 750, "text": "..."}
-```
-
-| Field | Description |
-|---|---|
-| `id` | `<spec_id>#<four-digit-seq>` — unique chunk identifier |
-| `spec_id` | Directory name of the source spec |
-| `path` | Path relative to the repository root |
-| `start` | Character offset into the source file |
-| `text` | Raw text of the chunk (900 chars by default, 150-char overlap) |
-
-### embeddings.npy
-
-NumPy float32 matrix of shape `(chunk_count, embedding_dim)`. Rows are L2-normalised, so dot-product equals cosine similarity. Row *i* corresponds to line *i* of `chunks.jsonl`.
-
-### manifest.json
-
-```json
-{
-  "generated_at": "2026-05-01T12:00:00Z",
-  "specs_dir": "openspec/specs",
-  "model": "sentence-transformers/all-MiniLM-L6-v2",
-  "chunk_size": 900,
-  "chunk_overlap": 150,
-  "spec_count": 12,
-  "chunk_count": 47
-}
+```yaml
+generated_at: <ISO 8601 timestamp>
+specs_dir: <relative path to specs directory>
+specs:
+  - id: <spec directory name>
+    domain: <inferred domain string>
+    updated_at: <ISO 8601 timestamp of last git commit>
+    summary: <single sentence extracted from spec opening paragraph>
+    token_estimate: <integer>
+    paths:
+      - <referenced code path>
+    symbols:
+      - <referenced identifier>
+    headings:
+      - <h2 or h3 heading text>
+    related:
+      - <spec id cross-referenced in body>
 ```
 
-Used by `spec-index rag-check` to detect staleness: the index is stale if any `spec.md` is newer than `manifest.json` or if `spec_count` differs from the number of `spec.md` files on disk.
+### Field Definitions
 
-### Building the RAG index
+| Field | Source | Notes |
+|---|---|---|
+| `id` | Directory name | Matches `specs/<id>/spec.md` |
+| `domain` | Inferred from id prefix | First hyphen-delimited word (e.g. `auth-session` → `auth`) |
+| `updated_at` | `git log -1 --format=%cI` on the spec file | Omitted if not in a git repo |
+| `summary` | First paragraph of spec (between title and `---`) | Max 200 chars, markdown stripped |
+| `token_estimate` | `(character_count / 4)` rounded to nearest 10 | Rough guide for context budgeting |
+| `paths` | Backtick-quoted tokens containing `/` | Deduplicated; skip HTTP URLs and absolute paths |
+| `symbols` | Backtick-quoted tokens without `/` | Function/class/method names; skip pure numbers and single chars |
+| `headings` | H2 and H3 headings in spec body | Preserves order; useful for structural matching |
+| `related` | Other spec IDs found verbatim in spec body | Cross-reference for co-loading linked specs |
 
 ```bash
 spec-index rag-build [<specs-dir>]
@@ -76,36 +59,6 @@ spec-index rag-check [<specs-dir>]  # exits 0 if current, 1 if stale/missing
 
 ## Schema
 
-```yaml
-generated_at: <ISO 8601 timestamp>
-specs_dir: <relative path to specs directory>
-specs:
-  - id: <spec directory name>
-    domain: <inferred domain string>
-    summary: <single sentence extracted from spec opening paragraph>
-    token_estimate: <integer>
-    paths:
-      - <referenced code path>
-```
-
-### Field Definitions
-
-| Field | Source | Notes |
-|---|---|---|
-| `id` | Directory name | Matches `specs/<id>/spec.md` |
-| `domain` | Inferred from id prefix or paths | See domain inference rules below |
-| `summary` | First paragraph of spec (between title and `---`) | Max 1-2 sentences. Strip markdown formatting. |
-| `token_estimate` | `(character_count / 4)` rounded to nearest 10 | Rough guide for context budgeting |
-| `paths` | Backtick-quoted strings in spec body containing `/` | Deduplicated; skip single-segment tokens |
-
-### Domain Inference Rules
-
-Infer domain from the spec `id` prefix in this order:
-
-1. **First hyphen-delimited word** of the spec id (e.g., `auth-session` → `auth`, `payment-processing` → `payment`)
-2. **First path segment** of most-referenced `paths` entry (e.g., `services/payments/` → `payments`)
-3. **First hyphen-delimited word** of the spec id as fallback
-
 ---
 
 ## Build Procedure
@@ -117,16 +70,20 @@ Agents follow this procedure to generate or refresh `index.yaml`:
    find <specs_dir> -name "spec.md" | sort
    ```
 
-2. **For each spec file**, extract:
+2. **Collect all spec IDs** (needed for `related` detection before processing individual specs)
+
+3. **For each spec file**, extract:
    - **id**: the directory name containing the spec (`basename $(dirname <path>)`)
-   - **title line**: first line matching `^# `
+   - **domain**: first hyphen-delimited word of the id
+   - **updated_at**: `git log -1 --format=%cI -- <path>`; omit field if empty or git unavailable
    - **summary**: extracted using format detection:
      - **Spec Kit format** (title starts with `# Feature Specification:`): feature name from the title + first plain-text sentence from `### User Story 1`, joined with ` — `
      - **OpenSpec / custom format**: first non-blank text between the `# Title` line and the first `---` separator; max 200 characters
    - **token_estimate**: `wc -c < <path>` divided by 4, rounded to nearest 10
-   - **paths**: all backtick-quoted tokens containing `/` that don't start with `http`, deduplicated
-
-3. **Infer domain** using the rules above
+   - **paths**: backtick-quoted tokens containing `/` that don’t start with `http` or `/`, no glob chars, deduplicated
+   - **symbols**: backtick-quoted tokens *without* `/`, not starting with `http`, not pure numbers, length ≥ 2, deduplicated
+   - **headings**: all lines matching `^#{2,3} `, text only, in document order
+   - **related**: other spec IDs from the full set whose name appears verbatim (word-boundary match) in this spec’s body
 
 4. **Write `index.yaml`** to `<specs_dir>/index.yaml` with `generated_at` set to current UTC time
 

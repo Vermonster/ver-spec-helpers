@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,7 +19,6 @@ from pathlib import Path
 
 
 def detect_specs_dir() -> Path | None:
-    """Return the first auto-detectable specs directory, or None."""
     for candidate in ["openspec/specs", "specs"]:
         p = Path(candidate)
         if p.is_dir() and any(p.rglob("spec.md")):
@@ -48,7 +48,6 @@ def require_specs_dir(path_arg: str | None) -> Path:
 
 
 def strip_markdown(text: str) -> str:
-    """Strip common inline markdown so summaries are plain text."""
     text = re.sub(r"`", "", text)
     text = re.sub(r"\*\*", "", text)
     text = re.sub(r"\*", "", text)
@@ -57,11 +56,23 @@ def strip_markdown(text: str) -> str:
     return text
 
 
+def _yaml_scalar(s: str) -> str:
+    """Quote a YAML scalar string if it contains special characters."""
+    if any(c in s for c in ':#[]{},&*?|>!%@"\''):
+        return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    return s
+
+
+def _yaml_list(values: list[str], indent: str = "      ") -> list[str]:
+    return [f"{indent}- {_yaml_scalar(v)}" for v in values]
+
+
+# ── extraction helpers ────────────────────────────────────────────────────────
+
+
 def extract_summary(text: str) -> str:
-    """Extract a short summary from spec content (≤ 200 chars, plain text)."""
     lines = text.splitlines()
 
-    # Spec Kit format: title line "# Feature Specification: NAME"
     if any(line.startswith("# Feature Specification:") for line in lines):
         feature_name = ""
         story_text = ""
@@ -82,7 +93,6 @@ def extract_summary(text: str) -> str:
         summary = f"{feature_name} — {story_text}" if story_text else feature_name
         return strip_markdown(summary)[:200]
 
-    # OpenSpec / custom format: first non-blank line between # Title and ---
     found_title = False
     for line in lines:
         if re.match(r"^# ", line):
@@ -99,7 +109,6 @@ def extract_summary(text: str) -> str:
 
 
 def extract_paths(text: str) -> list[str]:
-    """Extract backtick-quoted path-like tokens (no HTTP URLs, no globs)."""
     seen: set[str] = set()
     result: list[str] = []
     for token in re.findall(r"`([^`]+/[^`]+)`", text):
@@ -113,8 +122,55 @@ def extract_paths(text: str) -> list[str]:
     return sorted(result)
 
 
+def extract_symbols(text: str) -> list[str]:
+    """Backtick-quoted identifiers: function/class/method names (no slash)."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for token in re.findall(r"`([^`]+)`", text):
+        if "/" in token or token.startswith("http"):
+            continue
+        if re.match(r"^\d+$", token) or len(token) < 2:
+            continue
+        if token not in seen:
+            seen.add(token)
+            result.append(token)
+    return sorted(result)
+
+
+def extract_headings(text: str) -> list[str]:
+    """H2 and H3 headings from the spec body."""
+    headings = []
+    for line in text.splitlines():
+        m = re.match(r"^#{2,3} (.+)", line)
+        if m:
+            headings.append(m.group(1).strip())
+    return headings
+
+
+def extract_related(text: str, all_ids: set[str], current_id: str) -> list[str]:
+    """Other spec IDs explicitly referenced in this spec's body."""
+    return sorted(
+        sid for sid in all_ids
+        if sid != current_id and re.search(r"\b" + re.escape(sid) + r"\b", text)
+    )
+
+
+def git_updated_at(spec_path: Path) -> str | None:
+    """ISO 8601 timestamp of the last git commit touching this file."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%cI", "--", str(spec_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        ts = result.stdout.strip()
+        return ts if ts else None
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
 def token_estimate(spec_path: Path) -> int:
-    """Rough token estimate: file bytes / 4, rounded to nearest 10."""
     chars = spec_path.stat().st_size
     return round((chars / 4) / 10) * 10
 
@@ -128,6 +184,7 @@ def cmd_build(specs_dir: Path) -> None:
         print(f"error: no spec.md files found in {specs_dir}", file=sys.stderr)
         sys.exit(1)
 
+    all_ids = {f.parent.name for f in spec_files}
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
@@ -142,20 +199,33 @@ def cmd_build(specs_dir: Path) -> None:
         spec_id = spec_path.parent.name
         domain = spec_id.split("-")[0]
         text = spec_path.read_text(errors="ignore")
+
         summary = extract_summary(text)
         tokens = token_estimate(spec_path)
+        updated_at = git_updated_at(spec_path)
         paths = extract_paths(text)
+        symbols = extract_symbols(text)
+        headings = extract_headings(text)
+        related = extract_related(text, all_ids, spec_id)
 
         lines.append(f"  - id: {spec_id}")
         lines.append(f"    domain: {domain}")
+        if updated_at:
+            lines.append(f"    updated_at: {updated_at}")
         lines.append(f'    summary: "{summary}"')
         lines.append(f"    token_estimate: {tokens}")
-        if paths:
-            lines.append("    paths:")
-            for p in paths:
-                lines.append(f"      - {p}")
-        else:
-            lines.append("    paths: []")
+
+        for field, values in [
+            ("paths", paths),
+            ("symbols", symbols),
+            ("headings", headings),
+            ("related", related),
+        ]:
+            if values:
+                lines.append(f"    {field}:")
+                lines.extend(_yaml_list(values))
+            else:
+                lines.append(f"    {field}: []")
 
     index_path = specs_dir / "index.yaml"
     index_path.write_text("\n".join(lines) + "\n")
@@ -228,7 +298,7 @@ def cmd_stats(specs_dir: Path) -> None:
     text = index_path.read_text()
     total_specs = text.count("\n  - id:")
     total_tokens = sum(int(m) for m in re.findall(r"token_estimate: (\d+)", text))
-    domains = {}
+    domains: dict[str, int] = {}
     for d in re.findall(r"domain: (\S+)", text):
         domains[d] = domains.get(d, 0) + 1
 

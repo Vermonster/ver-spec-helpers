@@ -71,46 +71,24 @@ Announce: "Building spec index…" and report how many specs were indexed on com
 
 Read `<specs_dir>/index.yaml` in full. This file is small (typically <100 lines) and is the only spec-related file that must always be loaded.
 
-### 5. Semantic Search (if RAG index is available)
+### 5. Select Relevant Specs
 
-Check whether the RAG index is present and current:
+Given the task description, select specs to load using these signals, in priority order:
 
-```bash
-spec-index rag-check <specs_dir>
-```
+1. **Symbol match**: specs whose `symbols` list contains identifiers named in the task (function names, class names, method names)
+2. **Path overlap**: specs whose `paths` entries match files being modified or referenced in the task
+3. **Heading match**: specs whose `headings` contain terms from the task description
+4. **Domain match**: specs whose `domain` matches the task's functional area
+5. **Keyword match**: specs whose `summary` or `id` contains key terms from the task
+6. **Related**: if a spec is selected, check its `related` list and consider co-loading those specs
 
-If it exits 0, run a semantic search using the task description as the query:
+**Context budget**: aim to load specs totaling ≤ 4,000 `token_estimate`. If the relevant set exceeds this, prefer higher-priority matches and note what was excluded.
 
-```bash
-spec-index rag-search "<task description>" <specs_dir>
-```
-
-This prints a JSON array to stdout (progress goes to stderr). Parse it — each object has:
-- `spec_id` — which spec the chunk came from
-- `score` — cosine similarity (0–1); higher is more relevant
-- `text` — the matching passage
-
-Collect the `spec_id` values and their highest `score` across all chunks. Specs with a top-chunk score ≥ 0.4 are strong candidates. Keep this ranked list for the next step.
-
-If `rag-check` exits 1 (index missing or stale), skip to Step 6 and rely on keyword/domain selection. Do **not** rebuild the RAG index automatically — it is built separately and takes time.
-
-### 6. Select Relevant Specs
-
-Combine all available signals to decide which specs to load, in this priority order:
-
-1. **Semantic score** (from Step 5): specs with a top-chunk score ≥ 0.4 are strong candidates; ≥ 0.6 are near-certain matches. When RAG scores are available, let them be the dominant signal.
-2. **Direct path overlap**: specs whose `paths` entries match files being modified or referenced in the task
-3. **Domain match**: specs whose `domain` matches the task's functional area
-4. **Keyword match**: specs whose `summary` or `id` contains key terms from the task description
-5. **Foundation specs**: specs with `domain: infra` or `domain: auth` are often cross-cutting — include if the task touches authentication, tenancy, or infrastructure patterns
-
-**Context budget**: aim to load specs totaling ≤ 4,000 `token_estimate`. If the relevant set exceeds this, prefer higher-scoring or higher-priority matches and note what was excluded.
-
-### 7. Load Selected Specs
+### 6. Load Selected Specs
 
 Read each selected spec file at `<specs_dir>/<id>/spec.md`.
 
-### 8. Report What Was Loaded (and What Wasn't)
+### 7. Report What Was Loaded (and What Wasn't)
 
 ```
 ## Spec Context Loaded
@@ -130,8 +108,6 @@ To load additional specs: ask me to "also load <spec-id>".
 
 ## Guardrails
 
-- The RAG index is optional. If absent, fall back to keyword/domain selection — do not error
-- Never trigger `rag-build` automatically; it downloads a model and embeds all specs, which takes time
 - Always read the index before selecting specs — never load all specs without checking the index first
 - If the task description is vague, load index only and ask the user to clarify the task domain before loading spec files
 - If a user explicitly names a spec, load it regardless of relevance scoring
