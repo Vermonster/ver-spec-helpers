@@ -153,8 +153,17 @@ def main() -> None:
         print(f"error: not a directory: {specs_dir}", file=sys.stderr)
         sys.exit(1)
 
-    print("loading embedding model…", file=sys.stderr)
-    build_index(specs_dir, SentenceTransformer(resolve_model(MODEL_ID)))
+    resolved = resolve_model(MODEL_ID)
+    if resolved == MODEL_ID:
+        print(
+            f"loading {MODEL_ID} via HF Hub\n"
+            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
+            "and avoid this network call",
+            file=sys.stderr,
+        )
+    else:
+        print(f"loading model from {resolved}", file=sys.stderr)
+    build_index(specs_dir, SentenceTransformer(resolved))
 
 
 if __name__ == "__main__":

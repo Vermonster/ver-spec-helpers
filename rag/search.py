@@ -88,8 +88,17 @@ def load_model(specs_dir: Path) -> SentenceTransformer:
     model_id = "sentence-transformers/all-MiniLM-L6-v2"
     if manifest_path.exists():
         model_id = json.loads(manifest_path.read_text()).get("model", model_id)
-    print(f"loading model {model_id}…", file=sys.stderr)
-    return SentenceTransformer(resolve_model(model_id))
+    resolved = resolve_model(model_id)
+    if resolved == model_id:
+        print(
+            f"loading {model_id} via HF Hub\n"
+            "  tip: run 'make download-model' to save it to .ver-spec-helpers/models/ "
+            "and avoid this network call",
+            file=sys.stderr,
+        )
+    else:
+        print(f"loading model from {resolved}", file=sys.stderr)
+    return SentenceTransformer(resolved)
 
 
 def search(specs_dir: Path, query: str, k: int = 5) -> list[dict]:
