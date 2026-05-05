@@ -12,11 +12,40 @@ As a spec library grows, loading every spec floods the context window with irrel
 npx skills add Vermonster/ver-spec-helpers
 ```
 
+### Option A — pipx (recommended)
+
+Installs `spec-index` globally in an isolated environment with all dependencies included:
+
 ```bash
-# Also install the CLI into your repo (recommended)
+pipx install git+https://github.com/Vermonster/ver-spec-helpers
+```
+
+Then build the RAG index once (downloads the embedding model ~90 MB on first run, cached after that):
+
+```bash
+spec-index rag-build
+```
+
+### Option B — shell script (zero dependencies)
+
+Provides the YAML index commands only (`build`, `check`, `list`, `stats`). No Python or model required:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/Vermonster/ver-spec-helpers/main/bin/spec-index \
   -o bin/spec-index && chmod +x bin/spec-index
 ```
+
+To add RAG support on top, also install the standalone scripts:
+
+```bash
+mkdir -p rag
+curl -fsSL https://raw.githubusercontent.com/Vermonster/ver-spec-helpers/main/rag/build.py -o rag/build.py
+curl -fsSL https://raw.githubusercontent.com/Vermonster/ver-spec-helpers/main/rag/search.py -o rag/search.py
+pip install sentence-transformers numpy
+bin/spec-index rag-build
+```
+
+> **Note:** Add `rag/embeddings.npy` to `.gitignore` (binary, regenerated from source). Committing `rag/chunks.jsonl` and `rag/manifest.json` is optional but lets teammates skip the first `rag-build`.
 
 To install globally or a single skill:
 
@@ -109,6 +138,11 @@ bin/spec-index build   # build or rebuild the index
 bin/spec-index check   # exits 1 if stale — use in CI / pre-commit hooks
 bin/spec-index list    # list all specs with domain and summary
 bin/spec-index stats   # token budget and domain breakdown
+
+# RAG commands (require rag/ scripts + pip install -r rag/requirements.txt)
+bin/spec-index rag-build               # chunk + embed specs → rag/chunks.jsonl + embeddings.npy
+bin/spec-index rag-search "<query>"    # semantic search; prints JSON to stdout
+bin/spec-index rag-check               # exits 1 if RAG index is missing or stale
 ```
 
 ---

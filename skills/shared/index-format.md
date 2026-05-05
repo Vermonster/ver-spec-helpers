@@ -6,6 +6,74 @@
 
 ---
 
+## RAG Index
+
+The RAG index lives alongside `index.yaml` at `<specs_dir>/rag/` and enables semantic (vector) search. It is built separately from the YAML index and is optional — skills fall back to keyword/domain selection when it is absent.
+
+```
+<specs_dir>/
+  index.yaml           ← always present; keyword/domain metadata
+  rag/
+    chunks.jsonl       ← one JSON object per text chunk
+    embeddings.npy     ← float32 matrix; rows match chunks.jsonl
+    manifest.json      ← build metadata
+```
+
+### chunks.jsonl
+
+One JSON object per line, in the same order as the rows of `embeddings.npy`:
+
+```json
+{"id": "auth-session#0000", "spec_id": "auth-session", "path": "openspec/specs/auth-session/spec.md", "start": 0, "text": "..."}
+{"id": "auth-session#0001", "spec_id": "auth-session", "path": "openspec/specs/auth-session/spec.md", "start": 750, "text": "..."}
+```
+
+| Field | Description |
+|---|---|
+| `id` | `<spec_id>#<four-digit-seq>` — unique chunk identifier |
+| `spec_id` | Directory name of the source spec |
+| `path` | Path relative to the repository root |
+| `start` | Character offset into the source file |
+| `text` | Raw text of the chunk (900 chars by default, 150-char overlap) |
+
+### embeddings.npy
+
+NumPy float32 matrix of shape `(chunk_count, embedding_dim)`. Rows are L2-normalised, so dot-product equals cosine similarity. Row *i* corresponds to line *i* of `chunks.jsonl`.
+
+### manifest.json
+
+```json
+{
+  "generated_at": "2026-05-01T12:00:00Z",
+  "specs_dir": "openspec/specs",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "chunk_size": 900,
+  "chunk_overlap": 150,
+  "spec_count": 12,
+  "chunk_count": 47
+}
+```
+
+Used by `spec-index rag-check` to detect staleness: the index is stale if any `spec.md` is newer than `manifest.json` or if `spec_count` differs from the number of `spec.md` files on disk.
+
+### Building the RAG index
+
+```bash
+spec-index rag-build [<specs-dir>]
+```
+
+This calls `rag/build.py`, which downloads the embedding model on first run (~90 MB, cached by `sentence-transformers` in `~/.cache`). Subsequent runs skip the download.
+
+The RAG index is **not** rebuilt automatically by `ver-spec-search`. Rebuild it after adding or significantly changing specs, or add it to a pre-commit hook alongside `spec-index check`.
+
+### Staleness check
+
+```bash
+spec-index rag-check [<specs-dir>]  # exits 0 if current, 1 if stale/missing
+```
+
+---
+
 ## Schema
 
 ```yaml

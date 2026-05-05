@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ver-spec-helpers"
+version = "1.0.0"
+description = "Load and maintain a spec library using local semantic RAG search"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sentence-transformers>=2.7.0",
+    "numpy>=1.26.0",
+]
+
+[project.scripts]
+spec-index = "spec_helpers.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spec_helpers"]
