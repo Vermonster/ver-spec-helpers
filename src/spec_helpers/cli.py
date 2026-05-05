@@ -50,6 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Exit 1 if RAG index is missing or stale")
     rc.add_argument("specs_dir", nargs="?", default=None, metavar="<specs-dir>")
 
+    rd = sub.add_parser("rag-dir",
+                        help="Print the RAG index directory for this project")
+    rd.add_argument("specs_dir", nargs="?", default=None, metavar="<specs-dir>")
+
     return parser
 
 
@@ -85,10 +89,11 @@ def main() -> None:  # noqa: C901
 
     elif args.command == "rag-build":
         from sentence_transformers import SentenceTransformer
+        from spec_helpers.rag import resolve_model
         from spec_helpers.rag.build import MODEL_ID, build_index
         specs_dir = require_specs_dir(args.specs_dir)
         print("loading embedding model…", file=sys.stderr)
-        build_index(specs_dir, SentenceTransformer(MODEL_ID))
+        build_index(specs_dir, SentenceTransformer(resolve_model(MODEL_ID)))
 
     elif args.command == "rag-search":
         from spec_helpers.rag.search import search
@@ -97,10 +102,9 @@ def main() -> None:  # noqa: C901
         print(json.dumps(results, indent=2))
 
     elif args.command == "rag-check":
-        from spec_helpers.indexer import require_specs_dir as rsd
-        import re
-        specs_dir = rsd(args.specs_dir)
-        manifest = specs_dir / "rag" / "manifest.json"
+        from spec_helpers.rag import rag_index_dir
+        specs_dir = require_specs_dir(args.specs_dir)
+        manifest = rag_index_dir(specs_dir) / "manifest.json"
 
         if not manifest.exists():
             print(
@@ -133,3 +137,8 @@ def main() -> None:  # noqa: C901
 
         chunk_count = data.get("chunk_count", 0)
         print(f"ok: RAG index is current ({indexed} specs, {chunk_count} chunks)")
+
+    elif args.command == "rag-dir":
+        from spec_helpers.rag import rag_index_dir
+        specs_dir = require_specs_dir(args.specs_dir)
+        print(rag_index_dir(specs_dir))

@@ -1,3 +1,7 @@
+# ver-spec-helpers local data
+.ver-spec-helpers/models/
+.ver-spec-helpers/rag/embeddings.npy
+
 # Dependencies
 node_modules/
 

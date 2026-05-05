@@ -4,7 +4,7 @@ build.py — chunk and embed spec files for local RAG search
 Canonical source for this module. The standalone script at rag/build.py
 contains the same logic for users who prefer the curl-install path.
 
-Produces three files in <specs-dir>/rag/:
+Produces three files in .ver-spec-helpers/rag/:
   chunks.jsonl    one JSON object per chunk, rows match embeddings.npy
   embeddings.npy  float32 matrix, L2-normalised (dot-product = cosine sim)
   manifest.json   build metadata used by rag-check for staleness detection
@@ -26,6 +26,8 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from spec_helpers.rag import rag_index_dir, resolve_model
+
 MODEL_ID: str = os.environ.get(
     "SPEC_RAG_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
@@ -33,7 +35,6 @@ CHUNK_SIZE: int = int(os.environ.get("SPEC_CHUNK_SIZE", "900"))
 CHUNK_OVERLAP: int = int(os.environ.get("SPEC_CHUNK_OVERLAP", "150"))
 
 
-def chunk_text(
     text: str,
     size: int = CHUNK_SIZE,
     overlap: int = CHUNK_OVERLAP,
@@ -54,9 +55,9 @@ def iter_specs(specs_dir: Path):
 
 
 def build_index(specs_dir: Path, model: SentenceTransformer) -> None:
-    """Embed all spec chunks and write the RAG index to *specs_dir*/rag/."""
-    rag_dir = specs_dir / "rag"
-    rag_dir.mkdir(exist_ok=True)
+    """Embed all spec chunks and write the RAG index to .ver-spec-helpers/rag/."""
+    rag_dir = rag_index_dir(specs_dir)
+    rag_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[dict] = []
     vectors: list[np.ndarray] = []
@@ -110,7 +111,7 @@ def main() -> None:
         print(f"error: not a directory: {specs_dir}", file=sys.stderr)
         sys.exit(1)
     print("loading embedding model…", file=sys.stderr)
-    build_index(specs_dir, SentenceTransformer(MODEL_ID))
+    build_index(specs_dir, SentenceTransformer(resolve_model(MODEL_ID)))
 
 
 if __name__ == "__main__":

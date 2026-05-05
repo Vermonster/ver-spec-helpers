@@ -15,9 +15,10 @@ Commands:
   list  [<specs-dir>]              Print id, domain, and summary for each spec
   stats [<specs-dir>]              Show token budget and domain breakdown
 
-  rag-build  [<specs-dir>]         Chunk + embed specs; write chunks.jsonl and embeddings.npy
+  rag-build  [<specs-dir>]         Chunk + embed specs; write .ver-spec-helpers/rag/
   rag-search <query> [<specs-dir>] Semantic search; prints JSON array of top matches to stdout
   rag-check  [<specs-dir>]         Exit 1 if RAG index is missing or stale
+  rag-dir    [<specs-dir>]         Print the RAG index directory path
 
 <specs-dir> is auto-detected if omitted (looks for openspec/specs/ then specs/).
 RAG commands require Python 3 and: pip install -r rag/requirements.txt
@@ -308,14 +309,17 @@ cmd_rag_search() {
 
 cmd_rag_check() {
   specs_dir=$(require_specs_dir "${1:-}")
-  manifest="$specs_dir/rag/manifest.json"
+  py=$(require_python)
+  script=$(find_rag_script "build.py")
+
+  rag_dir=$("$py" "$script" --print-dir "$specs_dir")
+  manifest="$rag_dir/manifest.json"
 
   if [ ! -f "$manifest" ]; then
     printf 'stale: RAG index does not exist (run: spec-index rag-build %s)\n' "$specs_dir" >&2
     exit 1
   fi
 
-  # Any spec.md newer than the manifest?
   newer=$(find "$specs_dir" -name "spec.md" -newer "$manifest" | count_lines)
   if [ "$newer" -gt 0 ]; then
     printf 'stale: %s spec file(s) modified after RAG index was built (run: spec-index rag-build %s)\n' \
@@ -323,7 +327,6 @@ cmd_rag_check() {
     exit 1
   fi
 
-  # Spec count in manifest vs actual spec files
   actual=$(find "$specs_dir" -name "spec.md" | count_lines)
   indexed=$(grep -o '"spec_count": *[0-9]*' "$manifest" | grep -o '[0-9]*' || printf '0')
   if [ "$actual" != "$indexed" ]; then
@@ -334,6 +337,13 @@ cmd_rag_check() {
 
   chunk_count=$(grep -o '"chunk_count": *[0-9]*' "$manifest" | grep -o '[0-9]*' || printf '0')
   printf 'ok: RAG index is current (%s specs, %s chunks)\n' "$indexed" "$chunk_count"
+}
+
+cmd_rag_dir() {
+  specs_dir=$(require_specs_dir "${1:-}")
+  py=$(require_python)
+  script=$(find_rag_script "build.py")
+  exec "$py" "$script" --print-dir "$specs_dir"
 }
 
 # ── dispatch ─────────────────────────────────────────────────────────────────
@@ -349,6 +359,7 @@ case "$COMMAND" in
   rag-build)  cmd_rag_build  "$@" ;;
   rag-search) cmd_rag_search "$@" ;;
   rag-check)  cmd_rag_check  "$@" ;;
+  rag-dir)    cmd_rag_dir    "$@" ;;
   help|--help|-h|"") usage ;;
   *) printf 'error: unknown command: %s\n\n' "$COMMAND" >&2; usage; exit 1 ;;
 esac

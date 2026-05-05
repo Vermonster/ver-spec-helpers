@@ -18,9 +18,11 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from spec_helpers.rag import rag_index_dir, resolve_model
+
 
 def load_index(specs_dir: Path) -> tuple[list[dict], np.ndarray]:
-    rag_dir = specs_dir / "rag"
+    rag_dir = rag_index_dir(specs_dir)
     chunks_path = rag_dir / "chunks.jsonl"
     embeddings_path = rag_dir / "embeddings.npy"
 
@@ -41,12 +43,12 @@ def load_index(specs_dir: Path) -> tuple[list[dict], np.ndarray]:
 
 
 def load_model(specs_dir: Path) -> SentenceTransformer:
-    manifest_path = specs_dir / "rag" / "manifest.json"
+    manifest_path = rag_index_dir(specs_dir) / "manifest.json"
     model_id = "sentence-transformers/all-MiniLM-L6-v2"
     if manifest_path.exists():
         model_id = json.loads(manifest_path.read_text()).get("model", model_id)
     print(f"loading model {model_id}…", file=sys.stderr)
-    return SentenceTransformer(model_id)
+    return SentenceTransformer(resolve_model(model_id))
 
 
 def search(specs_dir: Path, query: str, k: int = 5) -> list[dict]:
