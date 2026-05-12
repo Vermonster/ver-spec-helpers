@@ -55,15 +55,20 @@ spec-index build <specs_dir>
 **Fallback**: Generate `<specs_dir>/index.yaml` directly:
 
 1. Discover specs: `find <specs_dir> -name "spec.md" | sort`
-2. For each spec, extract:
+2. Collect all spec IDs (needed for `related` detection)
+3. For each spec, extract:
    - **id**: directory name (`basename $(dirname <path>)`)
+   - **domain**: first hyphen-delimited word of the id
+   - **updated_at**: `git log -1 --format=%cI -- <path>`; omit if empty or git unavailable
    - **summary**: detect format first:
-     - If title line matches `^# Feature Specification:` (Spec Kit): use feature name + first plain-text sentence under `### User Story 1`, joined with ` — `
+     - If title line matches `^# Feature Specification:` (Spec Kit): feature name + first plain-text sentence under `### User Story 1`, joined with ` — `
      - Otherwise (OpenSpec/custom): first non-blank text between the `# Title` line and the first `---`; max 200 chars
    - **token_estimate**: `wc -c < <path>` ÷ 4, rounded to nearest 10
-   - **paths**: all backtick-quoted tokens containing `/` that don't start with `http`, deduplicated
-   - **domain**: first hyphen-delimited word of the spec id (e.g. `auth-session` → `auth`)
-3. Write `<specs_dir>/index.yaml` with `generated_at` set to current UTC time
+   - **paths**: backtick-quoted tokens containing `/` that don’t start with `http` or `/`, no glob chars, deduplicated
+   - **symbols**: backtick-quoted tokens *without* `/`, not starting with `http`, not pure numbers, length ≥ 2, deduplicated
+   - **headings**: all lines matching `^#{2,3} `, text only, in document order
+   - **related**: other spec IDs whose name appears verbatim (word-boundary match) in this spec’s body
+4. Write `<specs_dir>/index.yaml` with `generated_at` set to current UTC time
 
 Announce: "Building spec index…" and report how many specs were indexed on completion.
 
